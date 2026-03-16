@@ -1,0 +1,25 @@
+# Security Scanner User-Agent Patterns
+nikto
+sqlmap
+nmap
+masscan
+acunetix
+burpsuite
+metasploit
+nessus
+openvas
+w3af
+havij
+pangolin
+dirbuster
+dirb
+gobuster
+wfuzz
+commix
+ZAP
+OWASP
+nuclei
+jaeles
+subfinder
+shodan
+censys

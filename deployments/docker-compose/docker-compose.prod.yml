@@ -1,0 +1,86 @@
+version: "3.9"
+
+services:
+  demo-webapp:
+    build:
+      context: ../../apps/demo-webapp
+    restart: unless-stopped
+    volumes:
+      - nginx_logs:/var/log/nginx
+
+  sentinel-engine:
+    build:
+      context: ../../apps/sentinel-engine
+    restart: unless-stopped
+    volumes:
+      - nginx_logs:/var/log/nginx:ro
+      - ../../apps/sentinel-engine/rules:/app/rules:ro
+    environment:
+      LOG_FILE: /var/log/nginx/access.log
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: portaldb
+      POSTGRES_USER: portal
+      POSTGRES_PASSWORD: change-me
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  portal-api:
+    build:
+      context: ../../apps/portal-api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+psycopg://portal:change-me@postgres:5432/portaldb
+      SENTINEL_API_URL: http://sentinel-engine:8000
+      GRAFANA_BASE_URL: http://grafana:3000
+
+  portal-ui:
+    build:
+      context: ../../apps/portal-ui
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_PORTAL_API_URL: /api
+      NEXT_PUBLIC_GRAFANA_URL: /grafana
+
+  loki:
+    image: grafana/loki:3.1.1
+    restart: unless-stopped
+    command: -config.file=/etc/loki/config.yml
+    volumes:
+      - ../../infra/loki/config.yml:/etc/loki/config.yml:ro
+
+  promtail:
+    image: grafana/promtail:3.1.1
+    restart: unless-stopped
+    command: -config.file=/etc/promtail/config.yml
+    volumes:
+      - ../../infra/promtail/config.yml:/etc/promtail/config.yml:ro
+      - nginx_logs:/var/log/nginx:ro
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - ../../infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
+    volumes:
+      - ../../infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../../infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+
+volumes:
+  nginx_logs:
+  postgres_data:

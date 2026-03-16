@@ -1,0 +1,26 @@
+# Path Traversal Patterns
+\.\./
+\.\.\\
+%2e%2e%2f
+%2e%2e/
+%2e%2e\\
+/etc/passwd
+/etc/shadow
+/proc/self
+/proc/version
+/var/log
+/root/
+/home/[^/]+/\.ssh
+\.\.%252f
+\.\.%255c
+%c0%ae%c0%ae
+%uff0e%uff0e
+/windows/system32
+/winnt/system32
+boot\.ini
+win\.ini
+/apache/logs
+/nginx/
+\.\.;/
+WEB-INF/
+META-INF/

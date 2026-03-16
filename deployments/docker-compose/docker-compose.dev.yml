@@ -1,0 +1,162 @@
+services:
+  demo-webapp:
+    build:
+      context: ../../apps/demo-webapp
+    container_name: demo-webapp
+    ports:
+      - "8088:80"
+    volumes:
+      - nginx_logs:/var/log/nginx
+    restart: unless-stopped
+
+  log-generator:
+    build:
+      context: ../../apps/log-generator
+    container_name: log-generator
+    environment:
+      TARGET_URL: http://demo-webapp
+      INTERVAL_SEC: "0.8"
+    depends_on:
+      - demo-webapp
+    restart: unless-stopped
+
+  sentinel-engine:
+    build:
+      context: ../../apps/sentinel-engine
+    container_name: sentinel-engine
+    ports:
+      - "8000:8000"
+    volumes:
+      - nginx_logs:/var/log/nginx:ro
+      - ../../apps/sentinel-engine/rules:/app/rules:ro
+    environment:
+      LOG_FILE: /var/log/nginx/access.log
+    depends_on:
+      - demo-webapp
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: portal-postgres
+    environment:
+      POSTGRES_DB: portaldb
+      POSTGRES_USER: portal
+      POSTGRES_PASSWORD: portal
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U portal -d portaldb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: portal-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  portal-api:
+    build:
+      context: ../../apps/portal-api
+    container_name: portal-api
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: postgresql+psycopg://portal:portal@postgres:5432/portaldb
+      SENTINEL_API_URL: http://sentinel-engine:8000
+      GRAFANA_BASE_URL: http://grafana:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      sentinel-engine:
+        condition: service_started
+    restart: unless-stopped
+
+  portal-ui:
+    build:
+      context: ../../apps/portal-ui
+    container_name: portal-ui
+    ports:
+      - "3001:3001"
+    environment:
+      NEXT_PUBLIC_PORTAL_API_URL: http://localhost:8080
+      NEXT_PUBLIC_GRAFANA_URL: http://localhost:3000
+    depends_on:
+      - portal-api
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:3.1.1
+    container_name: loki
+    command: -config.file=/etc/loki/config.yml
+    ports:
+      - "3100:3100"
+    volumes:
+      - ../../infra/loki/config.yml:/etc/loki/config.yml:ro
+    restart: unless-stopped
+
+  promtail:
+    image: grafana/promtail:3.1.1
+    container_name: promtail
+    command: -config.file=/etc/promtail/config.yml
+    ports:
+      - "9080:9080"
+    volumes:
+      - ../../infra/promtail/config.yml:/etc/promtail/config.yml:ro
+      - nginx_logs:/var/log/nginx:ro
+    depends_on:
+      - loki
+      - demo-webapp
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../../infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_SECURITY_ALLOW_EMBEDDING: "true"
+    volumes:
+      - ../../infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../../infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+      - loki
+    restart: unless-stopped
+
+  homarr:
+    image: ghcr.io/homarr-labs/homarr:latest
+    container_name: homarr
+    ports:
+      - "7575:7575"
+    environment:
+      TZ: Asia/Kolkata
+      SECRET_ENCRYPTION_KEY: c1626f4ebb174158ce79839cfe59fdc8bbcacc66d6b74471da28fa20bfe8f47a
+    volumes:
+      - homarr_appdata:/appdata
+    restart: unless-stopped
+
+volumes:
+  nginx_logs:
+  postgres_data:
+  homarr_appdata:

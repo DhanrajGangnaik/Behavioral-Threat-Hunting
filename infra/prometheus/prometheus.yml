@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: sentinel-engine
+    static_configs:
+      - targets: ["sentinel-engine:8000"]
+
+  - job_name: promtail
+    static_configs:
+      - targets: ["promtail:9080"]

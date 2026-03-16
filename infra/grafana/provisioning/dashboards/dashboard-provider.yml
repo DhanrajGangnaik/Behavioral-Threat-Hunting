@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: primary-overview
+    orgId: 1
+    folder: Behavioral Threat Hunting
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards

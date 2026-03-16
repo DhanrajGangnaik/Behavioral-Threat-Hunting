@@ -1,0 +1,34 @@
+# SQL Injection Patterns
+UNION\s+SELECT
+DROP\s+TABLE
+INSERT\s+INTO
+DELETE\s+FROM
+' OR '1'='1
+' OR 1=1--
+admin'--
+' OR ''='
+EXEC\s*\(
+EXECUTE\s+IMMEDIATE
+xp_cmdshell
+WAITFOR\s+DELAY
+BENCHMARK\s*\(
+SLEEP\s*\(
+pg_sleep
+AND\s+1=1
+ORDER\s+BY\s+\d+--
+HAVING\s+1=1
+UNION\s+ALL\s+SELECT
+0x[0-9a-fA-F]+
+CHAR\s*\(
+CONCAT\s*\(
+LOAD_FILE\s*\(
+INTO\s+OUTFILE
+UNION\s+.*FROM
+SELECT\s+.*FROM
+--\s*$
+;\s*DROP
+;\s*DELETE
+\/\*.*\*\/.*SELECT
+mysql_query
+QUERY\s*\(
+prepare\s*\(
